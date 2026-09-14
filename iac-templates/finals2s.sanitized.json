@@ -1,0 +1,897 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "extensions_enablevmAccess_username": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmAccess_password": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmAccess_ssh_key": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmAccess_reset_ssh": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmAccess_remove_user": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmAccess_expiration": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmaccess_username_1": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmaccess_password_1": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmaccess_ssh_key_1": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmaccess_reset_ssh_1": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmaccess_remove_user_1": {
+            "type": "SecureString"
+        },
+        "extensions_enablevmaccess_expiration_1": {
+            "type": "SecureString"
+        },
+        "virtualMachines_VM1_name": {
+            "defaultValue": "VM1",
+            "type": "String"
+        },
+        "sshPublicKeys_VM1_key_name": {
+            "defaultValue": "VM1_key",
+            "type": "String"
+        },
+        "virtualNetworks_Vnet1_name": {
+            "defaultValue": "Vnet1",
+            "type": "String"
+        },
+        "virtualNetworks_Vnet2_name": {
+            "defaultValue": "Vnet2",
+            "type": "String"
+        },
+        "connections_OnPrem_Azure_name": {
+            "defaultValue": "OnPrem-Azure",
+            "type": "String"
+        },
+        "localNetworkGateways_LNG_name": {
+            "defaultValue": "LNG",
+            "type": "String"
+        },
+        "networkInterfaces_vm1821_name": {
+            "defaultValue": "vm1821",
+            "type": "String"
+        },
+        "publicIPAddresses_VNG_IP_name": {
+            "defaultValue": "VNG_IP",
+            "type": "String"
+        },
+        "networkSecurityGroups_NSG_name": {
+            "defaultValue": "NSG",
+            "type": "String"
+        },
+        "virtualNetworkGateways_VNG_name": {
+            "defaultValue": "VNG",
+            "type": "String"
+        },
+        "virtualMachines_VM_strongSwan_name": {
+            "defaultValue": "VM-strongSwan",
+            "type": "String"
+        },
+        "networkInterfaces_nic_strongswan_router_name": {
+            "defaultValue": "nic-strongswan-router",
+            "type": "String"
+        },
+        "publicIPAddresses_pip_strongswan_router_name": {
+            "defaultValue": "pip-strongswan-router",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Compute/sshPublicKeys",
+            "apiVersion": "2026-03-01",
+            "name": "[parameters('sshPublicKeys_VM1_key_name')]",
+            "location": "swedencentral",
+            "properties": {
+                "publicKey": "ssh-rsa REDACTED_PUBLIC_KEY"
+            }
+        },
+        {
+            "type": "Microsoft.Network/localNetworkGateways",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('localNetworkGateways_LNG_name')]",
+            "location": "swedencentral",
+            "properties": {
+                "localNetworkAddressSpace": {
+                    "addressPrefixes": []
+                },
+                "gatewayIpAddress": "REDACTED_GATEWAY_IP",
+                "bgpSettings": {
+                    "asn": 65001,
+                    "bgpPeeringAddress": "192.168.254.4",
+                    "peerWeight": 0
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('networkSecurityGroups_NSG_name')]",
+            "location": "swedencentral",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "SSH_WorkIP_VMSwan",
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups/securityRules', parameters('networkSecurityGroups_NSG_name'), 'SSH_WorkIP_VMSwan')]",
+                        "properties": {
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "REDACTED_PUBLIC_IP",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    },
+                    {
+                        "name": "Allow-IPSec-IKE",
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups/securityRules', parameters('networkSecurityGroups_NSG_name'), 'Allow-IPSec-IKE')]",
+                        "properties": {
+                            "protocol": "UDP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "500",
+                            "sourceAddressPrefix": "REDACTED_PUBLIC_IP",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 110,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    },
+                    {
+                        "name": "Allow-IPSec-NATT",
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups/securityRules', parameters('networkSecurityGroups_NSG_name'), 'Allow-IPSec-NATT')]",
+                        "properties": {
+                            "protocol": "UDP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "4500",
+                            "sourceAddressPrefix": "REDACTED_PUBLIC_IP",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 120,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    },
+                    {
+                        "name": "Allow-BGP",
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups/securityRules', parameters('networkSecurityGroups_NSG_name'), 'Allow-BGP')]",
+                        "properties": {
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "179",
+                            "sourceAddressPrefix": "10.0.255.30",
+                            "destinationAddressPrefix": "192.168.254.4",
+                            "access": "Allow",
+                            "priority": 130,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('publicIPAddresses_pip_strongswan_router_name')]",
+            "location": "swedencentral",
+            "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+            },
+            "properties": {
+                "ipAddress": "REDACTED_PUBLIC_IP",
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": [],
+                "ddosSettings": {
+                    "protectionMode": "VirtualNetworkInherited"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('publicIPAddresses_VNG_IP_name')]",
+            "location": "swedencentral",
+            "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+            },
+            "zones": [
+                "1",
+                "2",
+                "3"
+            ],
+            "properties": {
+                "ipAddress": "REDACTED_PUBLIC_IP",
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('virtualNetworks_Vnet1_name')]",
+            "location": "swedencentral",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "summarizedGatewayPrefixes": {
+                    "addressPrefixes": []
+                },
+                "encryption": {
+                    "enabled": false,
+                    "enforcement": "AllowUnencrypted"
+                },
+                "privateEndpointVNetPolicies": "Disabled",
+                "subnets": [
+                    {
+                        "name": "default",
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet1_name'), 'default')]",
+                        "properties": {
+                            "addressPrefixes": [
+                                "10.0.0.0/24"
+                            ],
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled",
+                            "defaultOutboundAccess": false
+                        }
+                    },
+                    {
+                        "name": "GatewaySubnet",
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet1_name'), 'GatewaySubnet')]",
+                        "properties": {
+                            "addressPrefixes": [
+                                "10.0.255.0/27"
+                            ],
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled",
+                            "defaultOutboundAccess": false
+                        }
+                    }
+                ],
+                "virtualNetworkPeerings": [],
+                "enableDdosProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2026-03-01",
+            "name": "[parameters('virtualMachines_VM1_name')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_vm1821_name'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_B2ats_v2"
+                },
+                "additionalCapabilities": {
+                    "hibernationEnabled": false
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "canonical",
+                        "offer": "ubuntu-26_04-lts",
+                        "sku": "server",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "osType": "Linux",
+                        "name": "[concat(parameters('virtualMachines_VM1_name'), '_OsDisk_1_261a417a28004dfdbd081f60e9f72b88')]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "storageAccountType": "StandardSSD_LRS",
+                            "id": "[resourceId('Microsoft.Compute/disks', concat(parameters('virtualMachines_VM1_name'), '_OsDisk_1_261a417a28004dfdbd081f60e9f72b88'))]"
+                        },
+                        "deleteOption": "Delete",
+                        "diskSizeGB": 30
+                    },
+                    "dataDisks": [],
+                    "diskControllerType": "SCSI"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('virtualMachines_VM1_name')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "/home/azureuser/.ssh/authorized_keys",
+                                    "keyData": "ssh-rsa REDACTED_PUBLIC_KEY"
+                                }
+                            ]
+                        },
+                        "provisionVMAgent": true,
+                        "patchSettings": {
+                            "patchMode": "ImageDefault",
+                            "assessmentMode": "ImageDefault"
+                        },
+                        "enableVMAgentPlatformUpdates": true
+                    },
+                    "secrets": [],
+                    "allowExtensionOperations": true,
+                    "requireGuestProvisionSignal": true,
+                    "adminUsername": "azureuser"
+                },
+                "securityProfile": {
+                    "securityType": "Standard"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_vm1821_name'))]",
+                            "properties": {
+                                "deleteOption": "Delete"
+                            }
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2026-03-01",
+            "name": "[parameters('virtualMachines_VM_strongSwan_name')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_nic_strongswan_router_name'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_B2ats_v2"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "ubuntu-24_04-lts",
+                        "sku": "server",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "osType": "Linux",
+                        "name": "[concat(parameters('virtualMachines_VM_strongSwan_name'), '_OsDisk_1_b8075c1ee0fa41b7b2f936fa04d8cd4c')]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "storageAccountType": "Standard_LRS",
+                            "id": "[resourceId('Microsoft.Compute/disks', concat(parameters('virtualMachines_VM_strongSwan_name'), '_OsDisk_1_b8075c1ee0fa41b7b2f936fa04d8cd4c'))]"
+                        },
+                        "deleteOption": "Detach",
+                        "diskSizeGB": 30
+                    },
+                    "dataDisks": [],
+                    "diskControllerType": "SCSI"
+                },
+                "osProfile": {
+                    "computerName": "strongswan",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "/home/azureuser/.ssh/authorized_keys",
+                                    "keyData": "ssh-rsa REDACTED_PUBLIC_KEY"
+                                }
+                            ]
+                        },
+                        "provisionVMAgent": true,
+                        "patchSettings": {
+                            "patchMode": "ImageDefault",
+                            "assessmentMode": "ImageDefault"
+                        },
+                        "enableVMAgentPlatformUpdates": true
+                    },
+                    "secrets": [],
+                    "allowExtensionOperations": true,
+                    "requireGuestProvisionSignal": true,
+                    "adminUsername": "azureuser"
+                },
+                "securityProfile": {
+                    "securityType": "Standard"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_nic_strongswan_router_name'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2026-03-01",
+            "name": "[concat(parameters('virtualMachines_VM_strongSwan_name'), '/enablevmaccess')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_VM_strongSwan_name'))]"
+            ],
+            "properties": {
+                "autoUpgradeMinorVersion": true,
+                "publisher": "Microsoft.OSTCExtensions",
+                "type": "VMAccessForLinux",
+                "typeHandlerVersion": "1.5",
+                "settings": {},
+                "protectedSettings": {
+                    "username": "[parameters('extensions_enablevmaccess_username_1')]",
+                    "password": "[parameters('extensions_enablevmaccess_password_1')]",
+                    "ssh_key": "[parameters('extensions_enablevmaccess_ssh_key_1')]",
+                    "reset_ssh": "[parameters('extensions_enablevmaccess_reset_ssh_1')]",
+                    "remove_user": "[parameters('extensions_enablevmaccess_remove_user_1')]",
+                    "expiration": "[parameters('extensions_enablevmaccess_expiration_1')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2026-03-01",
+            "name": "[concat(parameters('virtualMachines_VM1_name'), '/enablevmAccess')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_VM1_name'))]"
+            ],
+            "properties": {
+                "autoUpgradeMinorVersion": true,
+                "publisher": "Microsoft.OSTCExtensions",
+                "type": "VMAccessForLinux",
+                "typeHandlerVersion": "1.5",
+                "settings": {},
+                "protectedSettings": {
+                    "username": "[parameters('extensions_enablevmAccess_username')]",
+                    "password": "[parameters('extensions_enablevmAccess_password')]",
+                    "ssh_key": "[parameters('extensions_enablevmAccess_ssh_key')]",
+                    "reset_ssh": "[parameters('extensions_enablevmAccess_reset_ssh')]",
+                    "remove_user": "[parameters('extensions_enablevmAccess_remove_user')]",
+                    "expiration": "[parameters('extensions_enablevmAccess_expiration')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "apiVersion": "2025-07-01",
+            "name": "[concat(parameters('networkSecurityGroups_NSG_name'), '/Allow-BGP')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+            ],
+            "properties": {
+                "protocol": "TCP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "179",
+                "sourceAddressPrefix": "10.0.255.30",
+                "destinationAddressPrefix": "192.168.254.4",
+                "access": "Allow",
+                "priority": 130,
+                "direction": "Inbound",
+                "sourcePortRanges": [],
+                "destinationPortRanges": [],
+                "sourceAddressPrefixes": [],
+                "destinationAddressPrefixes": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "apiVersion": "2025-07-01",
+            "name": "[concat(parameters('networkSecurityGroups_NSG_name'), '/Allow-IPSec-IKE')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+            ],
+            "properties": {
+                "protocol": "UDP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "500",
+                "sourceAddressPrefix": "REDACTED_PUBLIC_IP",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 110,
+                "direction": "Inbound",
+                "sourcePortRanges": [],
+                "destinationPortRanges": [],
+                "sourceAddressPrefixes": [],
+                "destinationAddressPrefixes": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "apiVersion": "2025-07-01",
+            "name": "[concat(parameters('networkSecurityGroups_NSG_name'), '/Allow-IPSec-NATT')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+            ],
+            "properties": {
+                "protocol": "UDP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "4500",
+                "sourceAddressPrefix": "REDACTED_PUBLIC_IP",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 120,
+                "direction": "Inbound",
+                "sourcePortRanges": [],
+                "destinationPortRanges": [],
+                "sourceAddressPrefixes": [],
+                "destinationAddressPrefixes": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "apiVersion": "2025-07-01",
+            "name": "[concat(parameters('networkSecurityGroups_NSG_name'), '/SSH_WorkIP_VMSwan')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+            ],
+            "properties": {
+                "protocol": "TCP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "22",
+                "sourceAddressPrefix": "REDACTED_PUBLIC_IP",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 100,
+                "direction": "Inbound",
+                "sourcePortRanges": [],
+                "destinationPortRanges": [],
+                "sourceAddressPrefixes": [],
+                "destinationAddressPrefixes": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('virtualNetworks_Vnet2_name')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "192.168.0.0/16"
+                    ]
+                },
+                "encryption": {
+                    "enabled": false,
+                    "enforcement": "AllowUnencrypted"
+                },
+                "privateEndpointVNetPolicies": "Disabled",
+                "subnets": [
+                    {
+                        "name": "default",
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet2_name'), 'default')]",
+                        "properties": {
+                            "addressPrefixes": [
+                                "192.168.0.0/24"
+                            ],
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled",
+                            "defaultOutboundAccess": false
+                        }
+                    },
+                    {
+                        "name": "RouterSubnet",
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet2_name'), 'RouterSubnet')]",
+                        "properties": {
+                            "addressPrefixes": [
+                                "192.168.254.0/27"
+                            ],
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+                            },
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled",
+                            "defaultOutboundAccess": false
+                        }
+                    }
+                ],
+                "virtualNetworkPeerings": [],
+                "enableDdosProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2025-07-01",
+            "name": "[concat(parameters('virtualNetworks_Vnet1_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_Vnet1_name'))]"
+            ],
+            "properties": {
+                "addressPrefixes": [
+                    "10.0.0.0/24"
+                ],
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled",
+                "defaultOutboundAccess": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2025-07-01",
+            "name": "[concat(parameters('virtualNetworks_Vnet2_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_Vnet2_name'))]"
+            ],
+            "properties": {
+                "addressPrefixes": [
+                    "192.168.0.0/24"
+                ],
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled",
+                "defaultOutboundAccess": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2025-07-01",
+            "name": "[concat(parameters('virtualNetworks_Vnet1_name'), '/GatewaySubnet')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_Vnet1_name'))]"
+            ],
+            "properties": {
+                "addressPrefixes": [
+                    "10.0.255.0/27"
+                ],
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled",
+                "defaultOutboundAccess": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/connections",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('connections_OnPrem_Azure_name')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworkGateways', parameters('virtualNetworkGateways_VNG_name'))]",
+                "[resourceId('Microsoft.Network/localNetworkGateways', parameters('localNetworkGateways_LNG_name'))]"
+            ],
+            "properties": {
+                "virtualNetworkGateway1": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', parameters('virtualNetworkGateways_VNG_name'))]",
+                    "properties": {}
+                },
+                "localNetworkGateway2": {
+                    "id": "[resourceId('Microsoft.Network/localNetworkGateways', parameters('localNetworkGateways_LNG_name'))]",
+                    "properties": {}
+                },
+                "connectionType": "IPsec",
+                "connectionProtocol": "IKEv2",
+                "routingWeight": 0,
+                "authenticationType": "PSK",
+                "enableBgp": true,
+                "useLocalAzureIpAddress": false,
+                "usePolicyBasedTrafficSelectors": false,
+                "ipsecPolicies": [],
+                "trafficSelectorPolicies": [],
+                "tunnelProperties": [],
+                "expressRouteGatewayBypass": false,
+                "enablePrivateLinkFastPath": false,
+                "dpdTimeoutSeconds": 45,
+                "connectionMode": "Default",
+                "gatewayCustomBgpIpAddresses": [],
+                "routingConfiguration": {}
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('networkInterfaces_vm1821_name')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet1_name'), 'default')]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+            ],
+            "kind": "Regular",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "id": "[concat(resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_vm1821_name')), '/ipConfigurations/ipconfig1')]",
+                        "properties": {
+                            "privateIPAddress": "10.0.0.4",
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet1_name'), 'default')]"
+                            },
+                            "primary": true,
+                            "privateIPAddressVersion": "IPv4"
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": []
+                },
+                "enableAcceleratedNetworking": false,
+                "enableIPForwarding": false,
+                "disableTcpStateTracking": false,
+                "networkSecurityGroup": {
+                    "id": "[concat(resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name')), '_VM1')]"
+                },
+                "nicType": "Standard",
+                "auxiliaryMode": "None",
+                "auxiliarySku": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('virtualNetworkGateways_VNG_name')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_VNG_IP_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet1_name'), 'GatewaySubnet')]"
+            ],
+            "properties": {
+                "enablePrivateIpAddress": false,
+                "virtualNetworkGatewayMigrationStatus": {
+                    "state": "None",
+                    "phase": "None"
+                },
+                "ipConfigurations": [
+                    {
+                        "name": "default",
+                        "id": "[concat(resourceId('Microsoft.Network/virtualNetworkGateways', parameters('virtualNetworkGateways_VNG_name')), '/ipConfigurations/default')]",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_VNG_IP_name'))]"
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet1_name'), 'GatewaySubnet')]"
+                            }
+                        }
+                    }
+                ],
+                "natRules": [],
+                "virtualNetworkGatewayPolicyGroups": [],
+                "enableBgpRouteTranslationForNat": false,
+                "disableIPSecReplayProtection": false,
+                "sku": {
+                    "name": "VpnGw1AZ",
+                    "tier": "VpnGw1AZ"
+                },
+                "gatewayType": "Vpn",
+                "vpnType": "RouteBased",
+                "enableBgp": true,
+                "enableHighBandwidthVpnGateway": false,
+                "activeActive": false,
+                "bgpSettings": {
+                    "asn": 65515,
+                    "bgpPeeringAddress": "10.0.255.30",
+                    "peerWeight": 0,
+                    "bgpPeeringAddresses": [
+                        {
+                            "ipconfigurationId": "[concat(resourceId('Microsoft.Network/virtualNetworkGateways', parameters('virtualNetworkGateways_VNG_name')), '/ipConfigurations/default')]",
+                            "customBgpIpAddresses": []
+                        }
+                    ]
+                },
+                "vpnGatewayGeneration": "Generation2",
+                "allowRemoteVnetTraffic": false,
+                "allowVirtualWanTraffic": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2025-07-01",
+            "name": "[concat(parameters('virtualNetworks_Vnet2_name'), '/RouterSubnet')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_Vnet2_name'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+            ],
+            "properties": {
+                "addressPrefixes": [
+                    "192.168.254.0/27"
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+                },
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled",
+                "defaultOutboundAccess": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2025-07-01",
+            "name": "[parameters('networkInterfaces_nic_strongswan_router_name')]",
+            "location": "swedencentral",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_pip_strongswan_router_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet2_name'), 'RouterSubnet')]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+            ],
+            "kind": "Regular",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "id": "[concat(resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_nic_strongswan_router_name')), '/ipConfigurations/ipconfig1')]",
+                        "properties": {
+                            "privateIPAddress": "192.168.254.4",
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_pip_strongswan_router_name'))]"
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_Vnet2_name'), 'RouterSubnet')]"
+                            },
+                            "primary": true,
+                            "privateIPAddressVersion": "IPv4"
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": []
+                },
+                "enableAcceleratedNetworking": false,
+                "enableIPForwarding": true,
+                "disableTcpStateTracking": false,
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_NSG_name'))]"
+                },
+                "nicType": "Standard",
+                "auxiliaryMode": "None",
+                "auxiliarySku": "None"
+            }
+        }
+    ]
+}
+
+
